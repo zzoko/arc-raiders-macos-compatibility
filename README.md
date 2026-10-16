@@ -1,5 +1,8 @@
 # ARC Raiders compatibility — 0.2.0-alpha7
 
+**YouTube setup video:** Coming soon.
+<!-- YouTube video URL: -->
+
 Choose **one** ZIP matching your CrossOver version and how you launch Steam.
 Extract it completely, read its setup guide, then open `Install.command`.
 
