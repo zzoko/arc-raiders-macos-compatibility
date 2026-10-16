@@ -3,6 +3,13 @@
 **YouTube setup video:** Coming soon.
 <!-- YouTube video URL: -->
 
+If you'd like to support the compatibility work and ongoing maintenance:
+
+<p>
+  <a href="https://ko-fi.com/andreiii22"><img src="docs/images/support-kofi.svg" alt="Support on Ko-fi" width="250" height="64"></a>&nbsp;
+  <a href="https://github.com/sponsors/zzoko"><img src="docs/images/github-sponsors.svg" alt="Support through GitHub Sponsors" width="250" height="64"></a>
+</p>
+
 Choose **one** ZIP matching your CrossOver version and how you launch Steam.
 Extract it completely, read its setup guide, then open `Install.command`.
 

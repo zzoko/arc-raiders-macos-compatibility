@@ -1,0 +1,12 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="250" height="64" viewBox="0 0 250 64" role="img" aria-labelledby="title">
+  <title id="title">Support on Ko-fi</title>
+  <rect width="250" height="64" rx="11" fill="#2475cf"/>
+  <rect x=".5" y=".5" width="249" height="63" rx="10.5" fill="none" stroke="#ffffff" stroke-opacity=".15"/>
+  <g fill="none" stroke="#ffffff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M19 26h20v10a8 8 0 0 1-8 8h-4a8 8 0 0 1-8-8V26Zm20 2h2a5 5 0 0 1 0 10h-2M17 48h26M24 17v4m7-4v4"/>
+  </g>
+  <g fill="#ffffff" font-family="-apple-system,BlinkMacSystemFont,'Segoe UI',Helvetica,Arial,sans-serif">
+    <text x="57" y="29" font-size="17" font-weight="600">Support on Ko-fi</text>
+    <text x="57" y="48" font-size="12" fill-opacity=".85">Help fund compatibility work</text>
+  </g>
+</svg>
