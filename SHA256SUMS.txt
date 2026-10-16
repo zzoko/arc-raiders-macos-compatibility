@@ -1,0 +1,4 @@
+fc64489d057b9cc139063e088ccb90a9e2d8a9957548e0ee2dff8ede961e93b3  CrossOver 26.3 — CrossOver Steam bottle — 0.2.0-alpha7.zip
+5fd3161c7e6579e22b96a2f6bb6c2418ee6d11aff5f9d225a0bf583d579608c9  CrossOver 26.3 — NotProton Steam native — 0.2.0-alpha7.zip
+77d3f88d21857f7bb9ab6a2ae6cf0bd5d569d66c18bdc2cd97800a6862cb0901  CrossOver Preview 27.0.0.40734 — CrossOver Steam bottle — 0.2.0-alpha7.zip
+ce19c0f2846d4255aaee6aca91f706f6ce6af1b45268a9f0ba5a16e464becb80  CrossOver Preview 27.0.0.40734 — NotProton Steam native — 0.2.0-alpha7.zip
