@@ -1,7 +1,6 @@
 # ARC Raiders compatibility — 0.2.0-alpha7
 
-**YouTube setup video:** Coming soon.
-<!-- YouTube video URL: -->
+**YouTube setup video:** [Watch on YouTube](https://www.youtube.com/watch?v=5emn-mqPV5A)
 
 Choose **one** ZIP matching your CrossOver version and how you launch Steam.
 
