@@ -1,4 +1,6 @@
-# ARC Raiders compatibility — 0.2.0-alpha7
+# ARC Raiders compatibility
+
+Current packages: **NotProton Steam native 0.2.0-alpha8** and **CrossOver Steam bottle 0.2.0-alpha7**.
 
 **YouTube setup video:** [Watch on YouTube](https://www.youtube.com/watch?v=5emn-mqPV5A)
 
@@ -12,7 +14,7 @@ Choose **one** ZIP matching your CrossOver version and how you launch Steam.
 | CrossOver Preview 27.0.0.40734 — NotProton Steam native | Native macOS Steam with NotProton's runner for that exact Preview build. |
 
 **Requirements:** Apple Silicon, macOS 27.x, Rosetta, the matching CrossOver
-version, and a Steam copy of ARC Raiders. The native Steam route also requires NotProton.
+version, and a Steam copy of ARC Raiders. The native Steam route also requires NotProton 1.2.0.
 
 Extract the whole ZIP, open `Install.command`, and choose **Install / update**.
 
