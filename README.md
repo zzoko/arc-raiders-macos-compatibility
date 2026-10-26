@@ -28,23 +28,20 @@ Each ZIP includes setup and technical documentation, plus source and licenses in
 
 ## Game specific information
 
-- **Ray tracing (CrossOver Preview):** no longer forced off. Select Dynamic GI in the game. The highest setting was tested on M5 with Metal 4 enabled and a refreshed shader cache; availability depends on your Mac. If you previously added `D3DM_SUPPORT_DXR=0` in Launch Options, remove it to allow ray tracing.
-- **Shader-cache recovery:** for recurring graphics freezes or RTPSO/pipeline startup errors, quit the game and try **5 — Clear D3DMetal shader cache** in `Install.command`. It rebuilds automatically; expect shader-compilation stutter. This helped the tested setup, but the original ray-tracing crash cause is unconfirmed.
+- **Shader-cache recovery:** for recurring graphics freezes, quit the game and try **5 — Clear D3DMetal shader cache** in `Install.command`. It rebuilds automatically; expect shader-compilation stutter.
 
 <details>
 <summary><strong>Changelog</strong></summary>
 
 **0.2.0-alpha10 — Preview downloads (26 October 2026)**
 
-- Removed the forced ray-tracing-off default; D3DMetal detects support normally. Explicit user overrides remain available.
-- Metal 4 remains enabled normally; no new runtime binary patch or GPU fallback was needed.
+- Updated Preview graphics defaults.
 - Added shader-cache recovery guidance. CrossOver 26.3 downloads remain at alpha9.
 
 **0.2.0-alpha9 (October 2026)**
 
 - **Fixed:** the Preview NotProton download needed a Preview build (July, 27.0.0.40734) that official NotProton never supported, so it could not be set up on other Macs. Both Preview downloads now target **CrossOver Preview 20261015 (27.0.0.41073)**, which NotProton supports.
 - NotProton downloads now require **NotProton 1.2.1**.
-- Ray tracing is turned off on the Preview (see Game specific information).
 - **Fixed:** freezes after long play caused by an oversized D3DMetal shader cache: the launcher clears the cache once after such a hang, and `Install.command` has a new **5 Clear D3DMetal shader cache** option.
 - The Steam compatibility tool is now simply named **ARC Raiders - CrossOver &lt;version&gt;**.
 - Installer improvements shared with THE FINALS (safer runtime copy, CPU-check fix, clearer NotProton messages).
