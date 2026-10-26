@@ -1,17 +1,15 @@
 # ARC Raiders compatibility
 
-Current packages: **0.2.0-alpha9** for every route.
-
 **YouTube setup video:** [Watch on YouTube](https://www.youtube.com/watch?v=5emn-mqPV5A)
 
 Choose **one** ZIP matching your CrossOver version and how you launch Steam.
 
-| Package | What you use |
+| Package | Version |
 | --- | --- |
-| CrossOver 26.3 — CrossOver Steam bottle | Windows Steam inside CrossOver. |
-| CrossOver 26.3 — NotProton Steam native | Native macOS Steam with NotProton. |
-| CrossOver Preview 27.0.0.41073 — CrossOver Steam bottle | Windows Steam inside CrossOver Preview 20261015. |
-| CrossOver Preview 27.0.0.41073 — NotProton Steam native | Native macOS Steam with NotProton's runner for CrossOver Preview 20261015. |
+| CrossOver Preview 27.0.0.41073 — NotProton Steam native | 0.2.0-alpha10 |
+| CrossOver Preview 27.0.0.41073 — CrossOver Steam bottle | 0.2.0-alpha10 |
+| CrossOver 26.3 — NotProton Steam native | 0.2.0-alpha9 |
+| CrossOver 26.3 — CrossOver Steam bottle | 0.2.0-alpha9 |
 
 **Requirements:** Apple Silicon, macOS 27.x, Rosetta, the matching CrossOver
 version, and a Steam copy of ARC Raiders. The native Steam route also requires NotProton 1.2.1.
@@ -30,11 +28,17 @@ Each ZIP includes setup and technical documentation, plus source and licenses in
 
 ## Game specific information
 
-- **Ray tracing (CrossOver Preview):** turned off by default, because it currently fails on this Preview build. To test it anyway, add `D3DM_SUPPORT_DXR=1` before `%command%` in Steam's Launch Options (NotProton) — expect a crash if it is still unsupported.
-- **Freeze after long play:** if ARC Raiders freezes after loading in (audio keeps playing) and then shows an "Unhandled page fault" popup, the D3DMetal shader cache has grown too large for the Apple GPU driver. The launcher now clears that cache automatically once after such a hang. You can also clear it yourself: quit the game, open `Install.command` and choose **5 Clear D3DMetal shader cache**, or run `rm -rf "$(getconf DARWIN_USER_CACHE_DIR)d3dm/PioneerGame.exe"`. It rebuilds by itself; expect some stutter for the first session or two.
+- **Ray tracing (CrossOver Preview):** no longer forced off. Select Dynamic GI in the game. The highest setting was tested on M5 with Metal 4 enabled and a refreshed shader cache; availability depends on your Mac. If you previously added `D3DM_SUPPORT_DXR=0` in Launch Options, remove it to allow ray tracing.
+- **Shader-cache recovery:** for recurring graphics freezes or RTPSO/pipeline startup errors, quit the game and try **5 — Clear D3DMetal shader cache** in `Install.command`. It rebuilds automatically; expect shader-compilation stutter. This helped the tested setup, but the original ray-tracing crash cause is unconfirmed.
 
 <details>
 <summary><strong>Changelog</strong></summary>
+
+**0.2.0-alpha10 — Preview downloads (26 October 2026)**
+
+- Removed the forced ray-tracing-off default; D3DMetal detects support normally. Explicit user overrides remain available.
+- Metal 4 remains enabled normally; no new runtime binary patch or GPU fallback was needed.
+- Added shader-cache recovery guidance. CrossOver 26.3 downloads remain at alpha9.
 
 **0.2.0-alpha9 (October 2026)**
 
