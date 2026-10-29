@@ -1,6 +1,6 @@
 # ARC Raiders compatibility
 
-**[Check compatibility status in the main repository before downloading or opening an issue.](https://github.com/zzoko/mac-gaming-compatibility#readme)**
+**Check compatibility status in the main repository before downloading or opening an issue.** [View compatibility status ↗](https://github.com/zzoko/mac-gaming-compatibility#readme)
 
 **YouTube setup video:** [Watch on YouTube](https://www.youtube.com/watch?v=5emn-mqPV5A)
 
