@@ -1,4 +1,4 @@
-01c337617cccf586ff1a79f2b0eeaed63ac6b166b63fe78d4081214085a72b6b  CrossOver 26.3 — NotProton Steam native — 0.2.0-alpha9.zip
-043e1d6bf3b0c56aae13052f876294a4921ad3a2d45debc9add8a77aaf126149  CrossOver 26.3 — CrossOver Steam bottle — 0.2.0-alpha9.zip
-4c5c115be659db5161fb5c284126d943abb961bb9b8f11ba4f926771f1ace028  CrossOver Preview 27.0.0.41073 — CrossOver Steam bottle — 0.2.0-alpha10.zip
-b4965b7d003f0a5b045aeb76c70dc53413dccd98c3ccf707c628a8b3035a28fa  CrossOver Preview 27.0.0.41073 — NotProton Steam native — 0.2.0-alpha10.zip
+37025294cf7876a7c828aae38eb5268e0aa2717adb95891f857ab188016d08c0  CrossOver 26.3 — NotProton Steam native — 0.2.0-alpha11.1.zip
+7d7ab1aaa802841d067020e92298f7a12efb993a345ece335666efcc1e9e03b2  CrossOver Preview 27.0.0.41073 — CrossOver Steam bottle — 0.2.0-alpha11.1.zip
+c6b3571f30f9f256eb05185daba640f8d315de5822679b19c50bc3937ca90436  CrossOver 26.3 — CrossOver Steam bottle — 0.2.0-alpha11.1.zip
+fc197de5d120fff9d1467f0659f0cc7eef0dd2b9067bc5e8e21b0ab0ba7ed821  CrossOver Preview 27.0.0.41073 — NotProton Steam native — 0.2.0-alpha11.1.zip

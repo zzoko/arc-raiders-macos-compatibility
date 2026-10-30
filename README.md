@@ -1,18 +1,22 @@
 # ARC Raiders compatibility
 
+**Check compatibility <img src="docs/images/compatibility-status-red-v2.svg" alt="status" width="49" height="20"> in the main repository before downloading or opening an issue.** [View compatibility status ↗](https://github.com/zzoko/mac-gaming-compatibility#readme)
+
 **YouTube setup video:** [Watch on YouTube](https://www.youtube.com/watch?v=5emn-mqPV5A)
+
+<br><br>
 
 Choose **one** ZIP matching your CrossOver version and how you launch Steam.
 
 | Package | Version |
 | --- | --- |
-| CrossOver Preview 27.0.0.41073 — NotProton Steam native | 0.2.0-alpha10 |
-| CrossOver Preview 27.0.0.41073 — CrossOver Steam bottle | 0.2.0-alpha10 |
-| CrossOver 26.3 — NotProton Steam native | 0.2.0-alpha9 |
-| CrossOver 26.3 — CrossOver Steam bottle | 0.2.0-alpha9 |
+| CrossOver Preview 27.0.0.41073 — NotProton Steam native | 0.2.0-alpha11.1 |
+| CrossOver Preview 27.0.0.41073 — CrossOver Steam bottle | 0.2.0-alpha11.1 |
+| CrossOver 26.3 — NotProton Steam native | 0.2.0-alpha11.1 |
+| CrossOver 26.3 — CrossOver Steam bottle | 0.2.0-alpha11.1 |
 
 **Requirements:** Apple Silicon, macOS 27.x, Rosetta, the matching CrossOver
-version, and a Steam copy of ARC Raiders. The native Steam route also requires NotProton 1.2.1.
+version, and a Steam copy of ARC Raiders. The native Steam route also requires NotProton 1.2.3.
 For Preview, download `crossover-preview-20261015.zip` from CodeWeavers' Preview Center (not the `arm64` one).
 
 Extract the whole ZIP, open `Install.command`, and choose **Install / update**.
@@ -33,6 +37,12 @@ Each ZIP includes setup and technical documentation, plus source and licenses in
 <details>
 <summary><strong>Changelog</strong></summary>
 
+**0.2.0-alpha11.1 (30 October 2026)**
+
+- Restores startup after the ARC Raiders 2.03 update and repairs a window-cleanup hang.
+- Preserves caller-relative native library loading and the existing CPU/memory fixes.
+- NotProton integration updated to 1.2.3; explicit launch options take priority over saved settings, followed by fallback defaults.
+
 **0.2.0-alpha10 — Preview downloads (26 October 2026)**
 
 - Updated Preview graphics defaults.
@@ -45,7 +55,6 @@ Each ZIP includes setup and technical documentation, plus source and licenses in
 - **Fixed:** freezes after long play caused by an oversized D3DMetal shader cache: the launcher clears the cache once after such a hang, and `Install.command` has a new **5 Clear D3DMetal shader cache** option.
 - The Steam compatibility tool is now simply named **ARC Raiders - CrossOver &lt;version&gt;**.
 - Installer improvements shared with THE FINALS (safer runtime copy, CPU-check fix, clearer NotProton messages).
-- Tested: Preview + NotProton and 26.3 + CrossOver bottle launch correctly. The other two downloads use the same fixes but were not separately launch-tested.
 
 </details>
 
