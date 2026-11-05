@@ -10,10 +10,10 @@ Choose **one** ZIP matching your CrossOver version and how you launch Steam.
 
 | Package | Version |
 | --- | --- |
-| CrossOver Preview 27.0.0.41073 — NotProton Steam native | 0.2.0-alpha11.1 |
-| CrossOver Preview 27.0.0.41073 — CrossOver Steam bottle | 0.2.0-alpha11.1 |
-| CrossOver 26.3 — NotProton Steam native | 0.2.0-alpha11.1 |
-| CrossOver 26.3 — CrossOver Steam bottle | 0.2.0-alpha11.1 |
+| CrossOver Preview 27.0.0.41073 — NotProton Steam native | 0.2.0-alpha12 |
+| CrossOver Preview 27.0.0.41073 — CrossOver Steam bottle | 0.2.0-alpha12 |
+| CrossOver 26.3 — NotProton Steam native | 0.2.0-alpha12 |
+| CrossOver 26.3 — CrossOver Steam bottle | 0.2.0-alpha12 |
 
 **Requirements:** Apple Silicon, macOS 27.x, Rosetta, the matching CrossOver
 version, and a Steam copy of ARC Raiders. The native Steam route also requires NotProton 1.2.3.
@@ -36,6 +36,11 @@ Each ZIP includes setup and technical documentation, plus source and licenses in
 
 <details>
 <summary><strong>Changelog</strong></summary>
+
+**0.2.0-alpha12 (5 November 2026)**
+
+- Reduces CPU overhead from frequent system calls while preserving Wine's normal results and instrumentation callbacks.
+- Thanks to [@NidaleNieve](https://github.com/NidaleNieve) for the performance report and initial investigation in [#3](https://github.com/zzoko/arc-raiders-macos-compatibility/pull/3).
 
 **0.2.0-alpha11.1 (30 October 2026)**
 
