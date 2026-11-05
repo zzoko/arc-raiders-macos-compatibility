@@ -1,0 +1,16 @@
+--- a/rosetta_loader/src/main.cpp
++++ b/rosetta_loader/src/main.cpp
+@@ -742,9 +742,11 @@
+         "9b35a43bc84d45833510cef64b620648aafdda5e2ef5b527b7cedb123602e701",
+         "84f9e69ea0302dd7c27e4ab14bd4c2d93fdf98300e313b9535a309e07ffce9aa") &&
+         syscallFileMatches("/usr/libexec/rosetta/runtime",
+-        "5d0e8f9a10093a8af1fbae31b59917be2ad1b248c4a71bf570982ba5966c41c4") &&
++        "5d0e8f9a10093a8af1fbae31b59917be2ad1b248c4a71bf570982ba5966c41c4",
++        "2adfa4a95ae456b4e44e316c4713d9dfcdd87d421a97b1b4c4fd848c562f3d28") &&
+         syscallFileMatches("/Library/Apple/usr/libexec/oah/libRosettaRuntime",
+-        "a9bf23ac1b8a785060d4bec7337e4403d6bb4ad234e99100a489c5c3de4f292e");
++        "a9bf23ac1b8a785060d4bec7337e4403d6bb4ad234e99100a489c5c3de4f292e",
++        "f377654a7fe0218e0c502bff9949a27823fbfe1063304cefefbf1dcc94d9becd");
+ }
+ 
+ int main(int argc, char* argv[]) {
