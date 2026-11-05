@@ -1,0 +1,154 @@
+diff -ru a/Support/source/compatibility/cpu/nt_lab/payload.cpp b/Support/source/compatibility/cpu/nt_lab/payload.cpp
+--- a/Support/source/compatibility/cpu/nt_lab/payload.cpp	2026-11-05 03:26:42
++++ b/Support/source/compatibility/cpu/nt_lab/payload.cpp	2026-11-05 03:27:02
+@@ -42,12 +42,34 @@
+     nt_original_from_flags(flags,nzcv,packed);
+     *packed=(*packed&~0x20ULL)|((flags>>9)&0x20);
+ }
++// Fast invalid-syscall path (see payload.s). The loader writes the
++// libRosettaRuntime base and installs nt_syscall_term over the syscall
++// terminator emitter only when ARC_FAST_INVALID_SYSCALL=1.
++extern "C" { uint64_t nt_lib_base=0; }
++extern "C" const uint32_t nt_fsys[],nt_fsys_end[];
++extern "C" uint64_t nt_original_syscall_term(void *,void *,uint64_t);
++extern "C" uint64_t nt_syscall_term(void *ctx,void *term,uint64_t flags) {
++    if(flags&1)return nt_original_syscall_term(ctx,term,flags);   // single-step variant: unchanged
++    typedef uint64_t (*reg_fn)(void *,uint32_t);
++    typedef void (*mat_fn)(void *,uint64_t,uint64_t);
++    typedef void (*call_fn)(void *,uint32_t);
++    typedef uint64_t (*cont_fn)(void *,uint64_t);
++    // Same steps as libRosettaRuntime+0x193f4, with the fast block inserted.
++    uint64_t reg=((reg_fn)(nt_lib_base+0x2ace0))(ctx,6);                 // x28
++    uint64_t next=*(uint64_t *)((char *)term+8);
++    uint32_t off=*(uint32_t *)((next&~1ULL)+0x40);
++    ((mat_fn)(nt_lib_base+0x2d4f8))(ctx,off,reg);                        // x28 = next rip
++    emit(ctx,nt_fsys,nt_fsys_end);
++    ((call_fn)(nt_lib_base+0x1996c))(ctx,9);                             // bl syscall_handler
++    return ((cont_fn)(nt_lib_base+0x19aec))(ctx,next);                   // fall through
++}
+ __attribute__((used,section("__DATA,nt_hooks")))
+ static const uintptr_t hooks[]={
+     0x4e544c4142303031ULL,
+     (uintptr_t)nt_translate,(uintptr_t)nt_to_flags,(uintptr_t)nt_from_flags,(uintptr_t)nt_far_ret,
+     (uintptr_t)nt_original_translate,(uintptr_t)nt_original_to_flags,
+     (uintptr_t)nt_original_from_flags,(uintptr_t)nt_original_far_ret,
+-    (uintptr_t)&nt_emit_word
++    (uintptr_t)&nt_emit_word,
++    (uintptr_t)&nt_lib_base,(uintptr_t)nt_syscall_term,(uintptr_t)nt_original_syscall_term
+ };
+ extern "C" __attribute__((used)) void start() {}
+diff -ru a/Support/source/compatibility/cpu/nt_lab/payload.s b/Support/source/compatibility/cpu/nt_lab/payload.s
+--- a/Support/source/compatibility/cpu/nt_lab/payload.s	2026-11-05 03:26:42
++++ b/Support/source/compatibility/cpu/nt_lab/payload.s	2026-11-05 03:26:47
+@@ -23,3 +23,59 @@
+ .globl _nt_original_far_ret
+ _nt_original_far_ret:
+     .space 32
++
++// ---------------------------------------------------------------------------
++// ARC fast invalid-syscall path, opt-in via ARC_FAST_INVALID_SYSCALL=1.
++// Rosetta translates x86 `syscall` (libRosettaRuntime+0x193f4) as
++//     x28 = next rip ; bl syscall_handler ; <next instruction>
++// and the handler turns an invalid class into brk #5 -> exception server ->
++// soft SIGSYS for Wine (~22 us). nt_syscall_term (payload.cpp) inserts this
++// block between `x28 = next rip` and the `bl`. For eax == 0xFFFFFFFF with TF
++// clear it produces exactly what Wine returns for that syscall and skips the
++// `bl`: rax = 0xC000001C, rcx = next rip, rdx = 0, r11 = RFLAGS (built with the
++// same sequence Rosetta emits for pushfq, plus the NT bit this payload keeps in
++// x17 bit 5), flags and every other register unchanged. Anything else runs the
++// original `bl`. It is ordinary translated code, so Rosetta handles signals,
++// suspension and single-stepping around it as usual. No flags are modified.
++.p2align 2
++.globl _nt_fsys,_nt_fsys_end
++_nt_fsys:
++    add   w22, w0, #1                  // eax == 0xFFFFFFFF  <=>  w0 + 1 == 0
++    cbnz  w22, _nt_fsys_end            // -> original bl
++    tbnz  w17, #4, _nt_fsys_end        // TF set -> original bl
++    mov   w22, #0x202                  // RFLAGS, as Rosetta's pushfq translation builds it
++    cset  w23, mi
++    bfi   w22, w23, #7, #1             // SF
++    cset  w23, eq
++    bfi   w22, w23, #6, #1             // ZF
++    cset  w23, lo
++    bfxil w22, w23, #0, #1             // CF
++    cset  w23, vs
++    bfi   w22, w23, #11, #1            // OF
++    mrs   x24, NZCV
++    ubfx  w23, w24, #27, #1
++    bfi   w22, w23, #4, #1             // AF
++    ubfx  w23, w24, #26, #1
++    bfi   w22, w23, #2, #1             // PF
++    lsr   w23, w17, #1
++    bfi   w22, w23, #10, #1            // DF
++    lsr   w23, w17, #2
++    bfi   w22, w23, #18, #1            // AC
++    lsr   w23, w17, #3
++    bfi   w22, w23, #21, #1            // ID
++    lsr   w23, w17, #4
++    bfi   w22, w23, #8, #1             // TF
++    ubfx  x23, x17, #5, #1
++    bfi   w22, w23, #14, #1            // NT (alpha11.1 NT semantics)
++    mov   w11, w22                     // r11 = RFLAGS
++    mov   x1, x28                      // rcx = next rip
++    mov   x2, xzr                      // rdx = 0
++    movz  x0, #0x1c                    // rax = STATUS_INVALID_SYSTEM_SERVICE
++    movk  x0, #0xc000, lsl #16
++    b     . + 8                        // skip the following `bl syscall_handler`
++_nt_fsys_end:
++
++.p2align 4
++.globl _nt_original_syscall_term
++_nt_original_syscall_term:
++    .space 32
+diff -ru a/Support/source/compatibility/cpu/rosetta_loader/src/main.cpp b/Support/source/compatibility/cpu/rosetta_loader/src/main.cpp
+--- a/Support/source/compatibility/cpu/rosetta_loader/src/main.cpp	2026-11-05 03:26:42
++++ b/Support/source/compatibility/cpu/rosetta_loader/src/main.cpp	2026-11-05 03:27:02
+@@ -1055,7 +1055,7 @@
+     uint64_t initAddress=0;
+     if(!dbg.readMemory(exports.x87Exports,&initAddress,sizeof(initAddress)))return 2;
+     const uint64_t libraryBase=initAddress-offsetFinder.offsetInitLibrary_;
+-    uint64_t hooks[10]={};
++    uint64_t hooks[13]={};
+     auto *hookSection=machoLoader.getSection("__DATA","nt_hooks");
+     if(!hookSection){dbg.detach();return 2;}
+     if(!dbg.readMemory(machoBase+hookSection->addr,hooks,sizeof(hooks)))return 2;
+@@ -1106,6 +1106,39 @@
+            !dbg.writeMemory(targets[i],branch,16) ||
+            !dbg.adjustMemoryProtection(targets[i],VM_PROT_READ|VM_PROT_EXECUTE,16))return 2;
+         LOG("NT laboratory installed CPU hook %d at 0x%llx\n",i,targets[i]);
++    }
++    // Optional fast path for the x86 `syscall` with eax == 0xFFFFFFFF
++    // (see payload.s). Hooks the JIT syscall terminator emitter like the far-ret
++    // hook above; it and every translator helper the payload calls are checked
++    // byte-for-byte first. On any mismatch nothing is installed.
++    if(getenv("ARC_FAST_INVALID_SYSCALL") && !strcmp(getenv("ARC_FAST_INVALID_SYSCALL"),"1")) {
++        struct { uint64_t off; uint32_t code[4]; } guards[]={
++            {0x193f4,{0xa9bd57f6,0xa9014ff4,0xa9027bfd,0x910083fd}},  // syscall terminator emitter
++            {0x2ace0,{0xd0000148,0x911fe108,0x38614908,0x52800029}},  // fixed-register lookup
++            {0x2d4f8,{0xa9bd57f6,0xa9014ff4,0xa9027bfd,0x910083fd}},  // materialize rip offset
++            {0x1996c,{0xd100c3ff,0xa9014ff4,0xa9027bfd,0x910083fd}},  // emit runtime call
++            {0x19aec,{0xa9be4ff4,0xa9017bfd,0x910043fd,0xaa0103f4}},  // fall-through
++        };
++        bool ok=hooks[10] && hooks[11] && hooks[12];
++        uint32_t original[4]={};
++        for(auto &g:guards){uint32_t code[4];
++            ok=ok && dbg.readMemory(libraryBase+g.off,code,16) && !memcmp(code,g.code,16);}
++        if(ok) {
++            const uint64_t target=libraryBase+0x193f4;
++            ok=dbg.readMemory(target,original,16) && dbg.writeMemory(hooks[10],&libraryBase,8);
++            unsigned char trampoline[32];memcpy(trampoline,original,16);absBranch(trampoline+16,target+16);
++            ok=ok && dbg.adjustMemoryProtection(hooks[12],VM_PROT_READ|VM_PROT_WRITE,32) &&
++               dbg.writeMemory(hooks[12],trampoline,32) &&
++               dbg.adjustMemoryProtection(hooks[12],VM_PROT_READ|VM_PROT_EXECUTE,32);
++            unsigned char branch[16];absBranch(branch,hooks[11]);
++            ok=ok && dbg.adjustMemoryProtection(target,VM_PROT_READ|VM_PROT_WRITE|VM_PROT_COPY,16) &&
++               dbg.writeMemory(target,branch,16) &&
++               dbg.adjustMemoryProtection(target,VM_PROT_READ|VM_PROT_EXECUTE,16);
++            if(!ok)return 2;
++            LOG("ARC fast invalid-syscall emitter hook installed at 0x%llx\n",(unsigned long long)target);
++        } else {
++            LOG("ARC fast invalid-syscall path NOT installed (Rosetta layout differs)\n");
++        }
+     }
+     if(!dbg.detach())return 2;
+ 
