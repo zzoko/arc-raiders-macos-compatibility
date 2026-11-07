@@ -10,13 +10,13 @@ Choose **one** ZIP matching your CrossOver version and how you launch Steam.
 
 | Package | Version |
 | --- | --- |
-| CrossOver Preview 27.0.0.41073 — NotProton Steam native | 0.2.0-alpha12 |
-| CrossOver Preview 27.0.0.41073 — CrossOver Steam bottle | 0.2.0-alpha12 |
-| CrossOver 26.3 — NotProton Steam native | 0.2.0-alpha12 |
-| CrossOver 26.3 — CrossOver Steam bottle | 0.2.0-alpha12 |
+| CrossOver Preview 27.0.0.41073 — NotProton Steam native | 0.2.0-alpha13 |
+| CrossOver Preview 27.0.0.41073 — CrossOver Steam bottle | 0.2.0-alpha13 |
+| CrossOver 26.3 — NotProton Steam native | 0.2.0-alpha13 |
+| CrossOver 26.3 — CrossOver Steam bottle | 0.2.0-alpha13 |
 
 **Requirements:** Apple Silicon, macOS 27.x, Rosetta, the matching CrossOver
-version, and a Steam copy of ARC Raiders. The native Steam route also requires NotProton 1.2.3.
+version, and a Steam copy of ARC Raiders. **macOS 27.2 is required to use the improved Wine performance optimization.** The native Steam route also requires NotProton 1.2.3.
 For Preview, download `crossover-preview-20261015.zip` from CodeWeavers' Preview Center (not the `arm64` one).
 
 Extract the whole ZIP, open `Install.command`, and choose **Install / update**.
@@ -36,6 +36,12 @@ Each ZIP includes setup and technical documentation, plus source and licenses in
 
 <details>
 <summary><strong>Changelog</strong></summary>
+
+**0.2.0-alpha13 (7 November 2026)**
+
+- Clearer installer selection and confirmation across all downloads.
+- CrossOver bottle installers now find custom bottle and Windows Steam locations.
+- Thanks to [@alex-paradeyev](https://github.com/alex-paradeyev) for the installer contribution in [ARC Raiders #8](https://github.com/zzoko/arc-raiders-macos-compatibility/pull/8).
 
 **0.2.0-alpha12 (5 November 2026)**
 
