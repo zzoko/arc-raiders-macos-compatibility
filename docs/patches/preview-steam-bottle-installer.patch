@@ -1,0 +1,679 @@
+diff --git a/Install.command b/Install.command
+index 4d9fcc8..123f378 100755
+--- a/Install.command
++++ b/Install.command
+@@ -1,94 +1,377 @@
+ #!/bin/zsh
+ emulate -LR zsh
+-setopt ERR_EXIT NO_UNSET PIPE_FAIL
++setopt ERR_EXIT NO_UNSET PIPE_FAIL EXTENDED_GLOB
+ export PATH=/usr/bin:/bin:/usr/sbin:/sbin
+ umask 077
+-base=${0:A:h}; support="$base/Support"
+-profile=bottle; build=27.0.0.41073; short=Preview-27.0.0.41073
+-root="$HOME/Library/Application Support/ARC Raiders Compatibility"
++
++base=${0:A:h}
++support="$base/Support"
++source "$support/lib/steam-paths.zsh"
++build=27.0.0.41073
+ version=$(<"$support/version.txt")
+-dest="$root/$short-$version-$profile"
+-fail() { print -u2 -r -- "Error: $*"; exit 1; }
+-finish() { local code=$?; if [[ -t 0 ]]; then read -r 'reply?Press Return to close. ' || true; fi; return $code; }
++dest="$HOME/Library/Application Support/ARC Raiders Compatibility/Preview-$build-$version-bottle"
++preview=0
++list_only=0
++case ${1:-} in
++  '') ;;
++  --preview) preview=1 ;;
++  --list-bottles) list_only=1 ;;
++  --help|-h)
++    print -r -- 'Install.command [--preview | --list-bottles]'
++    print -r -- '  --preview       Choose a bottle and review the installation plan'
++    print -r -- '  --list-bottles  Find bottles and their Steam installations'
++    exit 0 ;;
++  *) print -u2 -r -- "Unknown argument: $1"; exit 2 ;;
++esac
++(( $# <= 1 )) || exit 2
++
++accent='' dim='' good='' warn='' reset=''
++if [[ -t 1 && ${TERM:-dumb} != dumb && -z ${NO_COLOR:-} ]]; then
++  accent=$'\e[1;36m' dim=$'\e[2m' good=$'\e[32m' warn=$'\e[33m' reset=$'\e[0m'
++fi
++typeset -a bottles=() available=() steam_choices=() scanned_roots=()
++typeset -A preferred_steam=()
++bottle='' steam='' app=''
++section() { print -rl -- "" "${accent}── $1 ──${reset}"; }
++notice() { print -r -- "  ${warn}• $1${reset}"; }
++fail() { print -u2 -r -- "  ${warn}Error: $*${reset}"; exit 1; }
++ask() {
++  if [[ -t 0 && -t 1 ]]; then
++    print -nr -- "  ${accent}$1${reset} "
++  else
++    print -r -- "  $1"
++  fi
++  IFS= read -r REPLY || REPLY=0
++}
++finish() {
++  local code=$?
++  if [[ -t 0 && -t 1 && $preview == 0 && $list_only == 0 ]]; then
++    print -nr -- $'\n  Press Enter to close… '
++    IFS= read -r _ || true
++  fi
++  return $code
++}
+ trap finish EXIT
+-read_path() {
+- local input
+- read -r "input?$1"
+- REPLY=${(Q)input}
+- [[ -n $REPLY ]] || fail 'No path entered.'
+- [[ $REPLY != '~/'* ]] || REPLY="$HOME/${REPLY#\~/}"
+- REPLY=${REPLY:a}
+-}
+-print -r -- 'CrossOver Preview 27.0.0.41073 — CrossOver Steam bottle'
+-print -r -- "$version · Apple Silicon · macOS 27 · automatic compatibility check
++parse_location() {
++  local input=$1
++  # Finder drag-and-drop inserts shell escapes. Keep a literal path if it exists.
++  if [[ ! -e $input ]]; then
++    input=${input%%[[:blank:]]#}
++    input=${(Q)input}
++  fi
++  [[ $input != '~/'* ]] || input="$HOME/${input#\~/}"
++  [[ $input == /* && $input != *[[:cntrl:]]* ]] || return 1
++  REPLY=${input:a}
++}
++valid_number() {
++  [[ $1 == <1-9999> && $1 != 0* ]] && (( $1 <= $2 ))
++}
++
++add_bottle() {
++  local candidate=${1:a} found
++  [[ $candidate != *[[:cntrl:]]* && -f $candidate/cxbottle.conf && -d $candidate/drive_c ]] || return 0
++  for found in "${bottles[@]}"; do
++    [[ ! $candidate -ef $found ]] || return 0
++  done
++  bottles+=("$candidate")
++}
++scan_bottles() {
++  local folder=${1:a} depth=$2 found marker
++  [[ -d $folder && $folder != / ]] && path_without_links "$folder" || return 0
++  for found in "${scanned_roots[@]}"; do
++    [[ ! $folder -ef $found ]] || return 0
++  done
++  scanned_roots+=("$folder")
++  while IFS= read -r -d '' marker; do
++    add_bottle "${marker:h}"
++  done < <(/usr/bin/find -P "$folder" -xdev -maxdepth "$depth" \
++    \( -type d \( -name '.*' -o -name '*.app' -o -name drive_c -o -name dosdevices \) -prune \) \
++    -o \( -type f -name cxbottle.conf -print0 \) 2>/dev/null)
++}
++discover_bottles() {
++  local configured folder
++  local config="$HOME/Library/Application Support/CrossOver/CrossOver.conf"
++  bottles=()
++  scanned_roots=()
++  configured=$(/usr/bin/defaults read com.codeweavers.CrossOver BottleDir 2>/dev/null) || configured=''
++  [[ $configured != /* ]] || scan_bottles "$configured" 4
++  if [[ -f $config ]]; then
++    configured=$(/usr/bin/awk '
++      /^\[/ { active = ($0 == "[CrossOver]") }
++      active && /^[[:space:]]*"BottlePath"[[:space:]]*=[[:space:]]*"/ {
++        sub(/^[^=]*=[[:space:]]*"/, ""); sub(/"[[:space:]]*$/, ""); print; exit
++      }' "$config")
++    for folder in "${(@s/:/)configured}"; do
++      [[ $folder != /* ]] || scan_bottles "$folder" 4
++    done
++  fi
++  for folder in "${(@s/:/)${CX_BOTTLE_PATH:-}}"; do
++    [[ $folder != /* ]] || scan_bottles "$folder" 4
++  done
++  scan_bottles "$HOME/Library/Application Support/CrossOver/Bottles" 3
++  scan_bottles '/Library/Application Support/CrossOver/Bottles' 3
++  if [[ -f ${base:h}/cxbottle.conf ]]; then
++    add_bottle "${base:h}"
++    scan_bottles "${base:h:h}" 4
++  else
++    scan_bottles "${base:h}" 2
++  fi
++  for folder in /Volumes/*(N/); do
++    scan_bottles "$folder" 4
++  done
++}
++bottle_issue() {
++  local conf="$1/cxbottle.conf"
++  if ! path_without_links "$conf" || ! path_without_links "$1/drive_c"; then
++    print -r -- 'path contains a symbolic link'
++  elif ! /usr/bin/grep -Eq '^"WineArch"[[:space:]]*=[[:space:]]*"win64"' "$conf"; then
++    print -r -- 'requires a 64-bit bottle'
++  elif ! /usr/bin/grep -Eq '^"Preview"[[:space:]]*=[[:space:]]*"1"' "$conf"; then
++    print -r -- 'requires a CrossOver Preview bottle'
++  elif /usr/bin/grep -Eq '^"(BinPath|LibPath|DllPath|CX_ROOT|ARC_[A-Z0-9_]+)"[[:space:]]*=' "$conf"; then
++    print -r -- 'CrossOver runtime paths are overridden'
++  fi
++}
++add_steam() {
++  local folder=$1 exe=$2 existing
++  steam_path_ok "$folder" "$exe" || return 0
++  for existing in "${steam_choices[@]}"; do
++    if [[ $exe -ef $existing && ${exe:h} -ef ${existing:h} ]]; then return 0; fi
++  done
++  steam_choices+=("$exe")
++}
++find_steam() {
++  local folder=$1 exe
++  steam_choices=()
++  path_without_links "$folder/drive_c" || return 0
++  add_steam "$folder" "$folder/drive_c/Steam/Steam.exe"
++  add_steam "$folder" "$folder/drive_c/Program Files (x86)/Steam/Steam.exe"
++  while IFS= read -r -d '' exe; do
++    add_steam "$folder" "$exe"
++  done < <(/usr/bin/find -P "$folder/drive_c" -xdev -maxdepth 6 \
++    \( -type d \( -iname windows -o -iname steamapps -o -iname appcache -o -iname depotcache \) -prune \) \
++    -o \( -type f -iname Steam.exe -print0 \) 2>/dev/null)
++  if [[ -n ${preferred_steam[$folder]:-} ]]; then
++    add_steam "$folder" "$preferred_steam[$folder]"
++  fi
++}
++show_bottles() {
++  local folder issue exe
++  available=()
++  section 'CrossOver Bottles'
++  (( $#bottles )) || notice 'No bottles found. You can enter a folder manually.'
++  for folder in "${bottles[@]}"; do
++    issue=$(bottle_issue "$folder")
++    find_steam "$folder"
++    if [[ -z $issue && $#steam_choices == 0 ]]; then issue='Steam.exe not found'; fi
++    if [[ -z $issue ]]; then
++      available+=("$folder")
++      print -r -- "  ${good}[$#available]${reset}  ${folder:t}"
++    else
++      print -r -- "  ${warn}[–]${reset}  ${folder:t}  ${dim}· $issue${reset}"
++    fi
++    print -r -- "       ${dim}$folder${reset}"
++    for exe in "${steam_choices[@]}"; do
++      print -r -- "       ↳ ${exe#"$folder/"}"
++    done
++    print
++  done
++}
++manual_bottle() {
++  local target folder
++  ask 'Drag in a bottle folder, a folder containing bottles, or Steam.exe (0 to go back):'
++  [[ $REPLY != 0 ]] || return 0
++  if ! parse_location "$REPLY"; then
++    notice 'Enter the full path to a folder or Steam.exe.'
++    return 0
++  fi
++  target=$REPLY
++  if [[ -d $target ]]; then
++    scan_bottles "$target" 4
++  elif [[ ${target:t:l} == steam.exe ]]; then
++    folder=${target:h}
++    while [[ $folder != / && ${folder:t} != drive_c ]]; do folder=${folder:h}; done
++    if [[ $folder != / && -f ${folder:h}/cxbottle.conf ]] && steam_path_ok "${folder:h}" "$target"; then
++      add_bottle "${folder:h}"
++      preferred_steam[${folder:h}]=$target
++    else
++      notice 'Choose a regular Steam.exe file inside the bottle’s drive_c folder.'
++    fi
++  else
++    notice 'Folder or Steam.exe not found at that path.'
++  fi
++}
++pick_steam() {
++  local n exe issue
++  issue=$(bottle_issue "$bottle")
++  [[ -z $issue ]] || { notice "$issue"; return 1; }
++  find_steam "$bottle"
++  (( $#steam_choices )) || return 1
++  if (( $#steam_choices == 1 )); then steam=$steam_choices[1]; return 0; fi
++  section "Steam · ${bottle:t}"
++  for (( n=1; n<=$#steam_choices; ++n )); do
++    exe=$steam_choices[n]
++    print -rl -- "  [$n]  $(steam_windows_path "$bottle" "$exe")" "       $exe"
++  done
++  while true; do
++    ask 'Select a Steam installation (0 to go back):'
++    [[ $REPLY != 0 ]] || return 1
++    if valid_number "$REPLY" "$#steam_choices"; then
++      steam=$steam_choices[REPLY]
++      return 0
++    fi
++    notice 'Enter a number from the list.'
++  done
++}
++pick_bottle() {
++  discover_bottles
++  while true; do
++    show_bottles
++    print -r -- '  [M]  Enter a path    [R]  Scan again    [0]  Back'
++    ask 'Select a bottle:'
++    case ${REPLY:l} in
++      0) return 1 ;;
++      m) manual_bottle ;;
++      r) discover_bottles ;;
++      *)
++        if valid_number "$REPLY" "$#available"; then
++          bottle=$available[REPLY]
++          pick_steam && return 0
++        else
++          notice 'Enter an available bottle number, M, R, or 0.'
++        fi ;;
++    esac
++  done
++}
+
+-1  Install / update
+-2  Verify
+-3  Restore previous launcher
+-4  Remove launcher (preserve game and runtime)
+-5  Clear D3DMetal shader cache (if the game freezes after long play)
+-0  Exit"
+-read -r 'choice?Select: '
+-case $choice in
+- 0) exit 0 ;;
+- 1)
+-  typeset -a args=(--profile "$profile" --destination "$dest")
+-  if [[ $profile == bottle ]]; then
+-   typeset -a apps=() bottles=()
+-   for p in /Applications/*.app(N/) "$HOME"/Applications/*.app(N/); do
+-    [[ -f $p/Contents/Info.plist ]] || continue
+-    v=$(/usr/libexec/PlistBuddy -c 'Print :CFBundleVersion' "$p/Contents/Info.plist" 2>/dev/null) || continue
+-    [[ $v != $build ]] || apps+=("$p")
+-   done
+-   if (( ${#apps} == 1 )); then app=$apps[1]
+-   else read_path "Drag CrossOver $build.app here: "; app=$REPLY; fi
+-   args+=(--crossover "$app")
+-   for p in "$HOME/Library/Application Support/CrossOver/Bottles"/*(N/); do
+-    [[ ! -f "$p/drive_c/Program Files (x86)/Steam/Steam.exe" ]] || bottles+=("$p")
+-   done
+-   for ((i=1;i<=${#bottles};i++)); do print -r -- "$i  ${bottles[i]:t}"; done
+-   print -r -- '0  Choose another bottle folder'
+-   read -r 'pick?Bottle number: '
+-   [[ $pick == <-> ]] || fail 'Enter a listed number.'
+-   if [[ $pick == 0 ]]; then read_path 'Bottle folder: '; bottle=$REPLY
+-   elif ((pick>=1 && pick<=${#bottles})); then bottle=$bottles[pick]
+-   else fail 'Unknown bottle number.'; fi
++app_build() {
++  /usr/libexec/PlistBuddy -c 'Print :CFBundleVersion' "$1/Contents/Info.plist" 2>/dev/null
++}
++pick_app() {
++  local candidate n
++  local -a matches=()
++  for candidate in /Applications/*.app(N/) "$HOME"/Applications/*.app(N/); do
++    [[ $candidate != *[[:cntrl:]]* && -f $candidate/Contents/Info.plist && -d $candidate/Contents/SharedSupport/CrossOver ]] || continue
++    [[ $(app_build "$candidate") != $build ]] || matches+=("$candidate")
++  done
++  if (( $#matches == 1 )); then app=$matches[1]; return 0; fi
++  section "CrossOver Preview · $build"
++  (( $#matches )) || notice 'The required build was not found in Applications.'
++  for (( n=1; n<=$#matches; ++n )); do
++    print -r -- "  [$n]  $matches[n]"
++  done
++  while true; do
++    ask 'Select a number or drag in CrossOver Preview.app (0 to go back):'
++    [[ $REPLY != 0 ]] || return 1
++    if valid_number "$REPLY" "$#matches"; then app=$matches[REPLY]; return 0; fi
++    if parse_location "$REPLY" && [[ -d $REPLY/Contents/SharedSupport/CrossOver && $(app_build "$REPLY") == $build ]]; then
++      app=$REPLY
++      return 0
++    fi
++    notice "This package requires CrossOver Preview build $build."
++  done
++}
++show_plan() {
++  local manifest="${steam:h}/steamapps/appmanifest_1808500.acf"
++  section 'Installation Plan'
++  print -rl -- "  ${accent}CrossOver${reset}   $app" \
++    "  ${accent}Bottle   ${reset}   ${bottle:t}" \
++    "              $bottle" \
++    "  ${accent}Steam    ${reset}   $(steam_windows_path "$bottle" "$steam")" \
++    "              $steam" \
++    "  ${accent}Launcher ${reset}   ARC Raiders (Patched)" \
++    "  ${accent}Runtime  ${reset}   ~${dest#"$HOME"}"
++  if [[ -f $manifest ]]; then
++    print -r -- "  ${good}✓${reset} ARC Raiders manifest found in this Steam library."
+   else
+-   if /usr/bin/pgrep -x steam_osx >/dev/null || /usr/bin/pgrep -x Steam >/dev/null; then fail 'Quit native Steam before installing this launch integration.'; fi
+-   source_runtime="$HOME/Library/Application Support/notproton/runners/crossover-$build/CrossOver"
+-   [[ -d $source_runtime ]] || { read_path "NotProton-prepared CrossOver $build runtime: "; source_runtime=$REPLY; }
+-   args+=(--source-runtime "$source_runtime")
++    print -r -- "  ${dim}· ARC Raiders may be in a different Steam library. The manifest was not found here.${reset}"
+   fi
++}
++install_selected() {
++  local -a args=(--profile bottle --destination "$dest" --crossover "$app")
+   /bin/zsh "$support/install.zsh" --check "${args[@]}"
++  if [[ -d $dest/CrossOver ]]; then
++    /bin/zsh "$support/lib/bottle.zsh" --runtime "$dest/CrossOver" \
++      --bottle "$bottle" --steam-exe "$steam" --dry-run
++  fi
+   if [[ $(/usr/sbin/DevToolsSecurity -status 2>&1) != *enabled* ]]; then
+-   print -r -- 'The private runtime needs macOS Developer Tools authorization for its startup setup.
+-This is a system authorization setting; it does not require installing Xcode.
+-macOS will ask for an administrator password. No game is being launched.'
+-   read -r 'allow?Enable this authorization now? [y/N]: '
+-   [[ ${allow:l} == y || ${allow:l} == yes ]] || fail 'Setup cancelled; authorization was not changed.'
+-   /usr/bin/osascript -e 'do shell script "/usr/sbin/DevToolsSecurity -enable" with administrator privileges' || fail 'Administrator authorization was cancelled or failed.'
+-   [[ $(/usr/sbin/DevToolsSecurity -status 2>&1) == *enabled* ]] || fail 'macOS has not enabled the required authorization.'
++    notice 'The private runtime requires macOS Developer Tools authorization.'
++    ask 'Enable Developer Tools authorization now? [y/N]'
++    case ${REPLY:l} in y|yes|д|да) ;; *) fail 'Installation canceled.' ;; esac
++    /usr/bin/osascript -e 'do shell script "/usr/sbin/DevToolsSecurity -enable" with administrator privileges' || fail 'Developer Tools authorization failed or was canceled.'
++    [[ $(/usr/sbin/DevToolsSecurity -status 2>&1) == *enabled* ]] || fail 'Developer Tools authorization is still disabled.'
+   fi
+   /bin/zsh "$support/install.zsh" --install "${args[@]}"
+   /bin/zsh "$support/install.zsh" --verify --destination "$dest"
+-  if [[ $profile == bottle ]]; then
+-   /bin/zsh "$support/lib/bottle.zsh" --runtime "$dest/CrossOver" --bottle "$bottle"
+-   print -r -- "Ready: reopen the matching CrossOver app, select ${bottle:t}, and double-click ARC Raiders (Patched).
+-Graphics settings stay in the CrossOver bottle panel. Close other apps in that bottle before switching runtimes."
+-  else
+-   /bin/zsh "$support/lib/notproton.zsh" --runtime "$dest/CrossOver"
+-   print -r -- 'Restart native Steam. For ARC, select the tool matching this download under Properties → Compatibility. Use D3DMetal; choose DLSS, High Resolution and MSync in NotProton. Keep Advertise AVX2 off.'
+-  fi ;;
+- 2)
+-  /bin/zsh "$support/install.zsh" --verify --destination "$dest"
+-  /bin/zsh "$support/lib/$profile.zsh" --verify ;;
+- 3|4)
+-  [[ $choice == 3 ]] && mode=--rollback || mode=--remove
+-  /bin/zsh "$support/lib/$profile.zsh" "$mode" ;;
+- 5)
+-  cache_dir="$(/usr/bin/getconf DARWIN_USER_CACHE_DIR)d3dm/PioneerGame.exe"
+-  if /usr/bin/pgrep -if 'PioneerGame.exe' >/dev/null; then fail 'Quit ARC Raiders first, then clear the shader cache.'; fi
+-  if [[ -d $cache_dir ]]; then /bin/rm -rf -- "$cache_dir"; print -r -- 'Shader cache cleared. It rebuilds automatically; expect some stutter for the first session or two.'
+-  else print -r -- 'No shader cache found; nothing to clear.'; fi ;;
+- *) fail 'Choose a listed option.' ;;
+-esac
++  /bin/zsh "$support/lib/bottle.zsh" --runtime "$dest/CrossOver" --bottle "$bottle" --steam-exe "$steam"
++  print -r -- "  ${good}✓${reset} Open ARC Raiders (Patched) in the \"${bottle:t}\" bottle."
++}
++install_flow() {
++  while pick_bottle; do
++    pick_app || continue
++    show_plan
++    if (( preview )); then
++      print -rl -- "" "  ${good}✓${reset} Preview complete. No installation scripts were run."
++      return 0
++    fi
++    ask 'Start installation? [y/N] (B to choose a different bottle)'
++    case ${REPLY:l} in
++      y|yes|д|да) install_selected; return 0 ;;
++      b) continue ;;
++      *) print -r -- '  Installation canceled.'; return 0 ;;
++    esac
++  done
++}
++
++print -rl -- "${accent}╭──────────────────────────────────────────────╮${reset}" \
++  "${accent}│  ARC RAIDERS  /  CrossOver Installer         │${reset}" \
++  "${accent}╰──────────────────────────────────────────────╯${reset}" \
++  "  ${dim}CrossOver Preview $build · $version${reset}"
++if (( list_only )); then
++  discover_bottles
++  show_bottles
++  exit 0
++fi
++if (( preview )); then
++  print -r -- "  ${warn}◇ PREVIEW · discovery and selection only${reset}"
++  install_flow
++  exit 0
++fi
++section 'Actions'
++print -rl -- '  [1]  Install / update' \
++  '  [2]  Verify installed runtime and launcher' \
++  '  [3]  Restore previous launcher' \
++  '  [4]  Remove launcher' \
++  '  [5]  Clear D3DMetal shader cache' \
++  '  [0]  Exit'
++while true; do
++  ask 'Select an action:'
++  case $REPLY in
++    0) exit 0 ;;
++    1) install_flow; exit 0 ;;
++    2)
++      /bin/zsh "$support/install.zsh" --verify --destination "$dest"
++      /bin/zsh "$support/lib/bottle.zsh" --verify
++      exit 0 ;;
++    3|4)
++      if [[ $REPLY == 3 ]]; then mode=--rollback; else mode=--remove; fi
++      ask 'Confirm launcher action? [y/N]'
++      case ${REPLY:l} in y|yes|д|да) /bin/zsh "$support/lib/bottle.zsh" "$mode" ;; esac
++      exit 0 ;;
++    5)
++      cache_dir="$(/usr/bin/getconf DARWIN_USER_CACHE_DIR)d3dm/PioneerGame.exe"
++      /usr/bin/pgrep -if 'PioneerGame.exe' >/dev/null && fail 'Quit ARC Raiders before clearing the cache.'
++      if [[ -d $cache_dir ]]; then
++        ask 'Clear the shader cache? [y/N]'
++        case ${REPLY:l} in
++          y|yes|д|да)
++            /bin/rm -r -- "$cache_dir"
++            print -r -- '  Shader cache cleared. It will rebuild on the next launch.' ;;
++        esac
++      else
++        print -r -- '  No shader cache found.'
++      fi
++      exit 0 ;;
++    *) notice 'Enter an action number from the menu.' ;;
++  esac
++done
+diff --git a/SHA256SUMS.txt b/SHA256SUMS.txt
+index f6e2eb9..6abec3a 100644
+--- a/SHA256SUMS.txt
++++ b/SHA256SUMS.txt
+@@ -1,8 +1,9 @@
+-8587c518cd5fe56926e37043c641214b5ae6e222a639e68e6fb7324c9b1e6027  Install.command
++e9e5dca32c4ab8e2f46c054c64f171705da06fcac3bbf4d2a477ac37f4665ceb  Install.command
+ 553d1eb248d8a0825b096bbe0eed987a0cea09972c88947255783a8703e4428c  README.md
+ 7785456e688f547f6d52935d88bb8abb107ce8fb7c5bfdd8e892d1e8ece1c3ed  Support/dependencies-bottle.tsv
+ 1064496c20345138ac1fc37071134af0359cc37b854bd70f0b23f570a44d1ed6  Support/install.zsh
+-557e2f7be8d9eb56d8edf0218695d4235c21457e1b85b1faa5dc726a9cffbfb3  Support/lib/bottle.zsh
++39fa7566b4539578c37d21329c9689ea0ec6ea6c66683b57a184651c9e888b23  Support/lib/bottle.zsh
++802a0437ea58ca1d2650a9392d54158cbb9310caf2d5bc83c219fe5d9547525a  Support/lib/steam-paths.zsh
+ 4e2f062fd9c658b60ba7c0000f88f08d2b8f1333fa7b1c37ec27859ecb2de59d  Support/licenses/AUTHORS
+ e237fa56668030e928551ddd60f05df5fe957f75eab874bbd017e085ed722e7c  Support/licenses/COPYING.LIB
+ 6772e983aceb5c51c299dc323f21d69bccd465f341042c4b3d0926c989b9b275  Support/licenses/INSTALLER-LICENSE.txt
+diff --git a/Support/lib/bottle.zsh b/Support/lib/bottle.zsh
+index 88fa821..472d8ec 100755
+--- a/Support/lib/bottle.zsh
++++ b/Support/lib/bottle.zsh
+@@ -4,7 +4,8 @@ emulate -LR zsh
+ setopt ERR_EXIT NO_UNSET PIPE_FAIL
+ umask 077
+ export PATH=/usr/bin:/bin:/usr/sbin:/sbin
+-runtime='' bottle='' mode=install
++source "${0:A:h}/steam-paths.zsh"
++runtime='' bottle='' steam_exe='' mode=install
+ state="$HOME/Library/Application Support/ARC Raiders Compatibility/BottleAdapter-Preview-27.0.0.41073"
+ dry=0 stage='' lock=''
+ menu_id='StartMenu/Programs/ARC Raiders (Patched)'
+@@ -29,20 +30,20 @@ runtime_entrypoint() {
+   done
+ }
+ usage() {
+-  print -r -- 'Usage: bottle.zsh --runtime PATH --bottle PATH [--state-dir PATH] [--dry-run]
++  print -r -- 'Usage: bottle.zsh --runtime PATH --bottle PATH [--steam-exe PATH] [--state-dir PATH] [--dry-run]
+        bottle.zsh --verify|--rollback|--remove [--state-dir PATH]
+ The core installer must verify the runtime before installation. Adds one ARC Raiders (Patched) bottle icon; graphics preferences and games remain intact.'
+ }
+ while (( $# )); do
+   case $1 in
+-    --runtime|--bottle|--state-dir)
++    --runtime|--bottle|--steam-exe|--state-dir)
+       (( $# >= 2 )) && [[ -n $2 && $2 != --* ]] || fail "Missing value for $1."
+-      case $1 in --runtime) runtime=$2 ;; --bottle) bottle=$2 ;; --state-dir) state=$2 ;; esac; shift 2 ;;
++      case $1 in --runtime) runtime=$2 ;; --bottle) bottle=$2 ;; --steam-exe) steam_exe=$2 ;; --state-dir) state=$2 ;; esac; shift 2 ;;
+     --verify|--rollback|--remove) [[ $mode == install ]] || fail 'Choose one mode.'; mode=${1#--}; shift ;;
+     --dry-run) dry=1; shift ;; --help|-h) usage; exit 0 ;; *) fail "Unknown argument: $1" ;;
+   esac
+ done
+-for p in "$state" "$runtime" "$bottle"; do
++for p in "$state" "$runtime" "$bottle" "$steam_exe"; do
+   [[ $p != *$'\n'* && $p != *$'\r'* && $p != *$'\t'* ]] || fail 'Paths cannot contain tabs or newlines.'
+ done
+ state=${state:a}; no_links "$state"
+@@ -54,13 +55,14 @@ verify() {
+   [[ -d $dir && -f $dir/.owner && -f $dir/checksums && $(<"$dir/.owner") == $marker ]] || fail "Unowned launcher: $dir"
+   for p in "$dir"/*(DN); do
+     [[ ! -L $p && -f $p ]] || fail 'Unexpected launcher content.'
+-    case ${p:t} in .DS_Store|.owner|checksums|'Launch ARC Raiders.command'|runtime.txt|bottle.txt|menu-command.txt) ;; *) fail 'Unexpected launcher file.' ;; esac
++    case ${p:t} in .DS_Store|.owner|checksums|'Launch ARC Raiders.command'|runtime.txt|bottle.txt|menu-command.txt|steam.txt) ;; *) fail 'Unexpected launcher file.' ;; esac
+   done
+   [[ -f "$dir/Launch ARC Raiders.command" && -f $dir/runtime.txt && -f $dir/bottle.txt ]] || fail 'Incomplete launcher; left untouched.'
+   [[ -x "$dir/Launch ARC Raiders.command" ]] || fail 'Launcher executable permission changed; left untouched.'
+   # Hash the fixed file list ourselves, rather than trusting paths listed by checksums.
+   local -a owned=(.owner 'Launch ARC Raiders.command' runtime.txt bottle.txt)
+   [[ ! -f $dir/menu-command.txt ]] || owned+=(menu-command.txt)
++  [[ ! -f $dir/steam.txt ]] || owned+=(steam.txt)
+   [[ $(cd "$dir"; /usr/bin/shasum -a 256 $owned) == $(<"$dir/checksums") ]] || fail 'Launcher was edited; left untouched.'
+ }
+ # Query only our entry using CrossOver's own parser. Missing section is exit 3.
+@@ -82,18 +84,29 @@ menu_check() {
+   local query=$(cxmenu --query --filter "$menu_id")
+   [[ $query == *"[$menu_id]"$'\n'"IDs=CXMenuMacOSX/"* ]] || fail 'The ARC icon is not exported to CrossOver. Re-run Install / update.'
+ }
++steam_subdir() {
++  local direct="$bottle/drive_c/Steam"
++  if [[ ! -L $direct && ! -L $direct/Steam.exe && -f $direct/Steam.exe ]]; then
++    print -r -- Steam
++  else
++    print -r -- 'Program Files (x86)/Steam'
++  fi
++}
+ menu_install() {
+-  local steam="$bottle/drive_c/Program Files (x86)/Steam" cached
++  local exe=$2 steam cached
+   local -a artwork=()
+   # Use the recipient's own cached ARC artwork; distribute no game image.
+-  for cached in "$steam/appcache/librarycache/1808500"/*.jpg(N); do
+-    if [[ -f "$steam/steam/games/${cached:t:r}.ico" ]]; then
+-      artwork=(--icon "$steam/steam/games/${cached:t:r}.ico")
+-    else
+-      artwork=(--icon "$cached")
+-    fi
+-    break
+-  done
++  if steam_path_ok "$bottle" "$exe"; then
++    steam=${exe:h}
++    for cached in "$steam/appcache/librarycache/1808500"/*.jpg(N); do
++      if [[ -f "$steam/steam/games/${cached:t:r}.ico" ]]; then
++        artwork=(--icon "$steam/steam/games/${cached:t:r}.ico")
++      else
++        artwork=(--icon "$cached")
++      fi
++      break
++    done
++  fi
+   cxmenu --create "$menu_id" --type raw \
+     --description "$menu_description" --command "$1" "${artwork[@]}" --install
+   menu_check "$1"
+@@ -128,7 +141,10 @@ if [[ $mode != install ]]; then
+     /bin/mv "$state/previous" "$state/current" || { /bin/mv "$state/.swap" "$state/current"; fail 'Rollback failed.'; }
+     /bin/mv "$state/.swap" "$state/previous"
+     runtime=$(<"$state/current/runtime.txt"); bottle=$(<"$state/current/bottle.txt")
+-    if [[ -f $state/current/menu-command.txt ]]; then menu_install "$(<"$state/current/menu-command.txt")"
++    if [[ -f $state/current/menu-command.txt ]]; then
++      steam_exe="$bottle/drive_c/$(steam_subdir)/Steam.exe"
++      [[ ! -f $state/current/steam.txt ]] || steam_exe=$(<"$state/current/steam.txt")
++      menu_install "$(<"$state/current/menu-command.txt")" "$steam_exe"
+     else menu_remove; fi
+     print -r -- "Restored previous launcher: $state/current/Launch ARC Raiders.command"
+   else
+@@ -153,8 +169,12 @@ runtime_entrypoint "$runtime/bin/wine"
+ if /usr/bin/grep -Eq '^"(BinPath|LibPath|DllPath|CX_ROOT|ARC_[A-Z0-9_]+)"[[:space:]]*=' "$bottle/cxbottle.conf"; then
+   fail 'This bottle overrides runtime paths or ARC compatibility internals. Remove those custom overrides first; ordinary graphics preferences are supported.'
+ fi
+-no_links "$bottle/drive_c/Program Files (x86)/Steam/Steam.exe"
+-[[ -f "$bottle/drive_c/Program Files (x86)/Steam/Steam.exe" ]] || fail 'Windows Steam is not installed at its standard location in this bottle.'
++[[ -n $steam_exe ]] || steam_exe="$bottle/drive_c/$(steam_subdir)/Steam.exe"
++steam_exe=${steam_exe:a}
++no_links "$steam_exe"
++steam_path_ok "$bottle" "$steam_exe" || fail 'Choose a regular Steam.exe inside this bottle’s drive_c, using a Windows-compatible path without quotes.'
++# The launcher passes the executable and Steam options as separate arguments to Wine.
++steam_windows_exe=$(steam_windows_path "$bottle" "$steam_exe")
+ /usr/bin/grep -Eq '^"Preview"[[:space:]]*=[[:space:]]*"1"' "$bottle/cxbottle.conf" || fail 'Select a bottle created or imported by the matching CrossOver Preview app. Stable bottles cannot be launched directly by Preview.'
+ typeset -a rels=('lib/arc-preview/arc-preview-regions.dylib' 'lib/arc-nt/runtime_loader' 'lib/arc-nt/libRuntimeRosettax87' 'lib/wine/x86_64-unix/wine' 'lib/wine/x86_64-unix/wine-nt-original' 'lib/wine/x86_64-windows/ntdll-arc.dll' 'lib/wine/x86_64-unix/winemac.so') hashes=()
+ for p in $rels; do no_links "$runtime/$p"; [[ -f $runtime/$p ]] || fail "Missing $p"; hashes+=("$(sha "$runtime/$p")"); done
+@@ -172,7 +192,7 @@ if (( menu_status == 0 )); then
+ elif (( menu_status != 3 )); then
+   fail 'Cannot inspect the bottle menu.'
+ fi
+-(( ! dry )) || { print -r -- "Would add ARC Raiders (Patched) inside $bottle using $runtime"; exit 0; }
++(( ! dry )) || { print -rl -- "Would add ARC Raiders (Patched) inside $bottle using $runtime" "Steam: \"$steam_windows_exe\" -applaunch 1808500 -culture=en"; exit 0; }
+ /bin/mkdir -p "${state:h}"
+ /bin/mkdir "$state.lock" || fail 'Adapter is busy.'; lock="$state.lock"
+ [[ -d $state ]] || { /bin/mkdir "$state"; print -r -- "$marker" > "$state/.owner"; }
+@@ -181,6 +201,7 @@ print -r -- "$marker" > "$stage/.owner"
+ print -r -- "$runtime" > "$stage/runtime.txt"
+ print -r -- "$bottle" > "$stage/bottle.txt"
+ print -r -- "$menu_command" > "$stage/menu-command.txt"
++print -r -- "$steam_exe" > "$stage/steam.txt"
+ {
+   print -r -- '#!/bin/zsh
+ emulate -LR zsh
+@@ -188,6 +209,7 @@ setopt ERR_EXIT NO_UNSET PIPE_FAIL
+ export PATH=/usr/bin:/bin:/usr/sbin:/sbin'
+   print -r -- "runtime=${(qq)runtime}"
+   print -r -- "bottle=${(qq)bottle}"
++  print -r -- "steam_windows_exe=${(qq)steam_windows_exe}"
+   for (( i=1; i<=${#rels}; ++i )); do
+     print -r -- "[[ \$(/usr/bin/shasum -a 256 -- \"\$runtime/${rels[i]}\" | /usr/bin/awk '{print \$1}') == ${hashes[i]} ]] || { print -u2 'Runtime changed. Re-run the installer to verify it.'; exit 1; }"
+   done
+@@ -221,19 +243,19 @@ fi
+ unset CX_BOTTLE WINEPREFIX WINEDLLPATH WINELOADER WINESERVER CX_INITIALIZED
+ print -r -- "Starting ARC Raiders with the private compatibility runtime."
+ exec "$runtime/bin/wine" --bottle "$bottle" --no-update --debugmsg -all --wait \
+-  '\''C:\Program Files (x86)\Steam\Steam.exe'\'' -applaunch 1808500 -culture=en'
++  "$steam_windows_exe" -applaunch 1808500 -culture=en'
+ } > "$stage/Launch ARC Raiders.command"
+ /bin/chmod 700 "$stage/Launch ARC Raiders.command"
+ /bin/zsh -n "$stage/Launch ARC Raiders.command"
+-( cd "$stage"; /usr/bin/shasum -a 256 .owner 'Launch ARC Raiders.command' runtime.txt bottle.txt menu-command.txt > checksums )
++( cd "$stage"; /usr/bin/shasum -a 256 .owner 'Launch ARC Raiders.command' runtime.txt bottle.txt menu-command.txt steam.txt > checksums )
+ if [[ -d $state/current && $(<"$stage/checksums") == $(<"$state/current/checksums") ]]; then
+-  menu_install "$menu_command"
++  menu_install "$menu_command" "$steam_exe"
+   print -r -- "Already configured: ARC Raiders (Patched) inside $bottle"; exit 0
+ fi
+ # Install/verify the menu first. It points to the stable current launcher path.
+ # A failed file commit leaves the previous launcher available; new entries roll back.
+ (( menu_status != 3 )) || menu_created=1
+-( menu_install "$menu_command" ) || fail 'Could not install the bottle icon.'
++( menu_install "$menu_command" "$steam_exe" ) || fail 'Could not install the bottle icon.'
+ if [[ -d $state/current ]]; then
+   [[ ! -d $state/previous ]] || /bin/rm -rf -- "$state/previous"
+   /bin/mv "$state/current" "$state/previous"
+diff --git a/Support/lib/steam-paths.zsh b/Support/lib/steam-paths.zsh
+new file mode 100644
+index 0000000..f541afd
+--- /dev/null
++++ b/Support/lib/steam-paths.zsh
+@@ -0,0 +1,25 @@
++# Shared by the bottle picker and launcher adapter. All paths are macOS paths.
++path_without_links() {
++  local component=${1:a}
++  while [[ $component != / ]]; do
++    [[ ! -L $component ]] || return 1
++    component=${component:h}
++  done
++}
++
++steam_path_ok() {
++  local drive="$1/drive_c" exe=$2 relative
++  [[ $exe == "$drive/"* && ${exe:t:l} == steam.exe && -f $exe ]] || return 1
++  path_without_links "$exe" || return 1
++  relative=${exe#"$drive/"}
++  # Only accept paths that can be passed safely as Windows executable arguments.
++  case $relative in
++    *[[:cntrl:]]*|*\\*|*:*|*\"*|*\'*|*\<*|*\>*|*\|*|*\?*|*\**) return 1 ;;
++  esac
++  return 0
++}
++
++steam_windows_path() {
++  local relative=${2#"$1/drive_c/"}
++  print -r -- "C:\\${relative//\//\\}"
++}
