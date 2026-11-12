@@ -10,19 +10,19 @@ Choose **one** ZIP matching your CrossOver version and how you launch Steam.
 
 | Package | Version |
 | --- | --- |
-| CrossOver Preview 27.0.0.41073 — NotProton Steam native | 0.2.0-alpha13 |
-| CrossOver Preview 27.0.0.41073 — CrossOver Steam bottle | 0.2.0-alpha13 |
-| CrossOver 26.3 — NotProton Steam native | 0.2.0-alpha13 |
-| CrossOver 26.3 — CrossOver Steam bottle | 0.2.0-alpha13 |
+| CrossOver Preview 27.0.0.41303 — NotProton Steam native | 0.2.0-alpha14.1 |
+| CrossOver Preview 27.0.0.41303 — CrossOver Steam bottle | 0.2.0-alpha14.1 |
+| CrossOver 26.3 — NotProton Steam native | 0.2.0-alpha14.1 |
+| CrossOver 26.3 — CrossOver Steam bottle | 0.2.0-alpha14.1 |
 
 **Requirements:** Apple Silicon, macOS 27.x, Rosetta, the matching CrossOver
-version, and a Steam copy of ARC Raiders. **macOS 27.2 is required to use the improved Wine performance optimization.** The native Steam route also requires NotProton 1.2.3.
-For Preview, download `crossover-preview-20261015.zip` from CodeWeavers' Preview Center (not the `arm64` one).
+version, and a Steam copy of ARC Raiders. **macOS 27.2 or 27.2.1 is required to use the improved Wine performance optimization.** The native Steam route also requires NotProton 1.2.5.
+For Preview, download `crossover-preview-20261111.zip` from CodeWeavers' Preview Center (not the `arm64` one).
 
 Extract the whole ZIP, open `Install.command`, and choose **Install / update**.
 
 - **CrossOver Steam bottle:** Launch **ARC Raiders (Patched)** inside your selected bottle.
-- **NotProton Steam native:** Restart Steam, select **ARC Raiders - CrossOver 26.3** or **ARC Raiders - CrossOver Preview 27.0.0.41073** as the compatibility tool, and click **Play**. No CrossOver Steam bottle is needed.
+- **NotProton Steam native:** Restart Steam, select **ARC Raiders - CrossOver 26.3** or **ARC Raiders - CrossOver Preview 27.0.0.41303** as the compatibility tool, and click **Play**. No CrossOver Steam bottle is needed.
 
 The installer creates a private runtime and leaves your installed CrossOver app
 and game files unchanged. Verification and rollback are included.
@@ -36,6 +36,13 @@ Each ZIP includes setup and technical documentation, plus source and licenses in
 
 <details>
 <summary><strong>Changelog</strong></summary>
+
+**0.2.0-alpha14.1 (12 November 2026)**
+
+- Fixes initialization with CrossOver Preview 20261111.
+- Supports CrossOver Preview 20261111 (27.0.0.41303), retaining the startup and window-cleanup repairs.
+- Updates native Steam integration to NotProton 1.2.5 while preserving saved graphics and synchronization choices.
+- Supports the Wine performance optimization on macOS 27.2.1.
 
 **0.2.0-alpha13 (7 November 2026)**
 
