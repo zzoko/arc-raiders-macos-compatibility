@@ -10,19 +10,19 @@ Choose **one** ZIP matching your CrossOver version and how you launch Steam.
 
 | Package | Version |
 | --- | --- |
-| CrossOver Preview 27.0.0.41303 — NotProton Steam native | 0.2.0-alpha14.1 |
-| CrossOver Preview 27.0.0.41303 — CrossOver Steam bottle | 0.2.0-alpha14.1 |
-| CrossOver 26.3 — NotProton Steam native | 0.2.0-alpha14.1 |
-| CrossOver 26.3 — CrossOver Steam bottle | 0.2.0-alpha14.1 |
+| CrossOver Preview 2026.11.11 — NotProton Steam native | 0.2.0-alpha14.2 |
+| CrossOver Preview 2026.11.11 — CrossOver Steam bottle | 0.2.0-alpha14.2 |
+| CrossOver 26.3 — NotProton Steam native | 0.2.0-alpha14.2 |
+| CrossOver 26.3 — CrossOver Steam bottle | 0.2.0-alpha14.2 |
 
 **Requirements:** Apple Silicon, macOS 27.x, Rosetta, the matching CrossOver
-version, and a Steam copy of ARC Raiders. **macOS 27.2 or 27.2.1 is required to use the improved Wine performance optimization.** The native Steam route also requires NotProton 1.2.5.
-For Preview, download `crossover-preview-20261111.zip` from CodeWeavers' Preview Center (not the `arm64` one).
+version, and a Steam copy of ARC Raiders. **macOS 27.2 or 27.2.1 is required to use the improved Wine performance optimization.** The native Steam route also requires NotProton 1.2.6.
+For Preview, choose **X86 / Rosetta**: `crossover-preview-20261111.zip` from CodeWeavers' Preview Center, even on Apple Silicon. Do not use the `arm64` archive.
 
 Extract the whole ZIP, open `Install.command`, and choose **Install / update**.
 
 - **CrossOver Steam bottle:** Launch **ARC Raiders (Patched)** inside your selected bottle.
-- **NotProton Steam native:** Restart Steam, select **ARC Raiders - CrossOver 26.3** or **ARC Raiders - CrossOver Preview 27.0.0.41303** as the compatibility tool, and click **Play**. No CrossOver Steam bottle is needed.
+- **NotProton Steam native:** Restart Steam, select **ARC Raiders - CrossOver 26.3** or **ARC Raiders - CrossOver Preview 2026.11.11** as the compatibility tool, and click **Play**. No CrossOver Steam bottle is needed.
 
 The installer creates a private runtime and leaves your installed CrossOver app
 and game files unchanged. Verification and rollback are included.
@@ -34,8 +34,17 @@ Each ZIP includes setup and technical documentation, plus source and licenses in
 
 - **Shader-cache recovery:** for recurring graphics freezes, quit the game and try **5 — Clear D3DMetal shader cache** in `Install.command`. It rebuilds automatically; expect shader-compilation stutter.
 
+If macOS blocks `hostcheck`, use **System Settings → Privacy & Security → Open Anyway**, approve it, then rerun the installer.
+
 <details>
 <summary><strong>Changelog</strong></summary>
+
+**0.2.0-alpha14.2 (12 November 2026)**
+
+- Updates native Steam integration to NotProton 1.2.6, which restores graphics controls for custom compatibility tools.
+- Uses the Preview release date in download and Steam tool names.
+- Clarifies the required X86 / Rosetta Preview download and macOS approval steps.
+
 
 **0.2.0-alpha14.1 (12 November 2026)**
 
