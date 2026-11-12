@@ -1,4 +1,4 @@
-2d74bf6346900cc07c48187fe189448904f402c9899c7cad3e3a1d95dd6bafa7  CrossOver 26.3 — CrossOver Steam bottle — 0.2.0-alpha14.2.zip
-67a1ce233bfc2fbc0d6f4a8732e1e1a9c8c797de9de4b22a8841f856cb13c5f9  CrossOver 26.3 — NotProton Steam native — 0.2.0-alpha14.2.zip
-681f88b0f9a22d9826951fa9e556267d70052c93fb1b8502ffa96bf0ba102da3  CrossOver Preview 2026.11.11 — CrossOver Steam bottle — 0.2.0-alpha14.2.zip
-cce0a5bbebbb551527f146cd0e386e20be59eb60b4f005452f1e86264d85b494  CrossOver Preview 2026.11.11 — NotProton Steam native — 0.2.0-alpha14.2.zip
+66b875bba48824e496fd8913f94c25be92410a370cc6968081c141ea6f666c36  ARC Raiders — CrossOver 26.3 — CrossOver Steam bottle — 0.2.0-alpha14.2.zip
+a438c5f24a9ec562b5dd033a22a5815ca53c62bb1dae0591adcf0b684cd14eb7  ARC Raiders — CrossOver Preview 2026.11.11 — NotProton Steam native — 0.2.0-alpha14.2.zip
+c01eb903b747a02c61d6b6444b189fa87cb03ca1a464e1c8a010e747ad14d398  ARC Raiders — CrossOver 26.3 — NotProton Steam native — 0.2.0-alpha14.2.zip
+c9d91c8f5c2b243d0fbe26e873c44a6d15833d2674c3548de2606b3b567f47db  ARC Raiders — CrossOver Preview 2026.11.11 — CrossOver Steam bottle — 0.2.0-alpha14.2.zip
