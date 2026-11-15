@@ -1,0 +1,16 @@
+--- a/rosetta_loader/src/main.cpp
++++ b/rosetta_loader/src/main.cpp
+@@ -743,9 +743,11 @@
+         "84f9e69ea0302dd7c27e4ab14bd4c2d93fdf98300e313b9535a309e07ffce9aa") || syscallFileMatches(wineDirectory/"ntdll.so",
+             "2266b97277dd14f5bc09fb845728c345aa033fd4c647e794ca90dc3d900c5dca")) &&
+         syscallFileMatches("/usr/libexec/rosetta/runtime",
+-        "5d0e8f9a10093a8af1fbae31b59917be2ad1b248c4a71bf570982ba5966c41c4") &&
++        "5d0e8f9a10093a8af1fbae31b59917be2ad1b248c4a71bf570982ba5966c41c4",
++        "338cbd38cad6c2f437b8d11d5b3b2f9751b1c4220b361d34efc7a5e4b1527a82") &&
+         syscallFileMatches("/Library/Apple/usr/libexec/oah/libRosettaRuntime",
+-        "a9bf23ac1b8a785060d4bec7337e4403d6bb4ad234e99100a489c5c3de4f292e");
++        "a9bf23ac1b8a785060d4bec7337e4403d6bb4ad234e99100a489c5c3de4f292e",
++        "8b98bb4c5638b8b61eef6e1e55c04f104381bf4891961ddab1bb8ac8214e5854");
+ }
+ 
+ int main(int argc, char* argv[]) {
